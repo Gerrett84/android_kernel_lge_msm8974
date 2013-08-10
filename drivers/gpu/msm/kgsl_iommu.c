@@ -441,7 +441,11 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	 * the GPU and trigger a snapshot. To stall the transaction return
 	 * EBUSY error.
 	 */
-	if (adreno_dev->ft_pf_policy & KGSL_FT_PAGEFAULT_GPUHALT_ENABLE)
+	if (adreno_dev->ft_pf_policy & KGSL_FT_PAGEFAULT_GPUHALT_ENABLE) {
+		/* turn off GPU IRQ so we don't get faults from it too */
+		kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_OFF);
+		adreno_set_gpu_fault(adreno_dev, ADRENO_IOMMU_PAGE_FAULT);
+		adreno_dispatcher_schedule(device);
 		ret = -EBUSY;
 done:
 	return ret;
