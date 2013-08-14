@@ -1210,6 +1210,7 @@ static void adreno_dispatcher_work(struct work_struct *work)
 	struct kgsl_device *device = &adreno_dev->dev;
 	int count = 0;
 	int last_context = KGSL_CONTEXT_INVALID;
+	int fault_handled = 0;
 
 	mutex_lock(&dispatcher->mutex);
 
@@ -1289,6 +1290,7 @@ static void adreno_dispatcher_work(struct work_struct *work)
 
 		if (dispatcher_do_fault(device))
 			goto done;
+		fault_handled = 1;
 
 		/* Get the last consumed timestamp */
 		consumed = kgsl_readtimestamp(device, cmdbatch->context,
@@ -1324,6 +1326,7 @@ static void adreno_dispatcher_work(struct work_struct *work)
 		adreno_set_gpu_fault(adreno_dev, ADRENO_TIMEOUT_FAULT);
 
 		dispatcher_do_fault(device);
+		fault_handled = 1;
 		break;
 	}
 
@@ -1332,7 +1335,7 @@ static void adreno_dispatcher_work(struct work_struct *work)
 	 * when no commands are in dispatcher but fault bit is set. This can
 	 * happen on false hang detects
 	 */
-	if (dispatcher_do_fault(device))
+	if (!fault_handled && dispatcher_do_fault(device))
 		goto done;
 	/*
 	 * Decrement the active count to 0 - this will allow the system to go
